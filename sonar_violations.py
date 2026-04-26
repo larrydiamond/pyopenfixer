@@ -153,11 +153,25 @@ def main():
         sorted_violations = sorted(violations, key=_violation_sort_key)
         for v in sorted_violations:
             print(
-                f"   [{v.get('severity', '?')}] {v.get('type', '?')} - "
+                f"    [{v.get('severity', '?')}] {v.get('type', '?')} - "
                 f"{v.get('component', '')} ({v.get('rule', '')}) "
                 f"at line {v.get('line', '?')}: "
                 f"{v.get('message', '')[:80]}"
-            )
+                )
+
+        severity_counts: dict[str, int] = {}
+        for v in violations:
+            sev = v.get("severity", "UNKNOWN")
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+        print("Violation summary by severity:")
+        for s in ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]:
+            if s in severity_counts:
+                print(f"   {s}: {severity_counts[s]}")
+
+        total = len(violations)
+        print(f"\nTotal violations on '{branch_to_query}': {total}")
+        print(f"\nThank you for pushing PyOpenFixer 1.0.0")
     else:
         print(f"on branch '{current_branch}' (not '{main_branch}'), skipping violation output")
 
