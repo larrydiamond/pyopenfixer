@@ -1,11 +1,16 @@
 import json
-import os
-import subprocess
-import requests
-import sys
-from pathlib import Path
-from typing import Optional
 
+import os
+
+import subprocess
+
+import requests
+
+import sys
+
+from pathlib import Path
+
+from typing import Optional
 
 def load_config(config_path: str = "config.json") -> dict:
     """Load configuration from a JSON file."""
@@ -134,7 +139,7 @@ def _violation_sort_key(v: dict):
     )
 
 
-def _print_violations(label: str, violations: list[dict]):
+def _print_violations(violations: list[dict]):
     """Print a list of violations with summary."""
     if not violations:
         return
@@ -162,6 +167,7 @@ def _print_severity_summary(violations: list[dict]):
 
 
 def main():
+    print(f"Running SonarQube violation fetcher for PyOpenFixer 1.0.0")
     config = load_config()
     base_url = config["sonarqube_url"].rstrip("/")
     project_key = config["project_key"]
@@ -183,7 +189,7 @@ def main():
         violations = fetch_violations(session, base_url, project_key, main_branch)
 
         print(f"\non main branch - {len(violations)} violations from {project_key} on branch '{main_branch}':")
-        _print_violations("", violations)
+        _print_violations(violations)
         _print_severity_summary(violations)
 
         print(f"\nTotal violations on '{main_branch}': {len(violations)}")
@@ -201,7 +207,7 @@ def main():
 
         if branch_only:
             print(f"\nNew violations on '{current_branch}' not in '{main_branch}':")
-            _print_violations("", branch_only)
+            _print_violations(branch_only)
             _print_severity_summary(branch_only)
 
     print(f"\nThank you for pushing PyOpenFixer 1.0.0")
