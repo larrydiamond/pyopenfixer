@@ -1,0 +1,4 @@
+{
+       "sonarqube_url": "https://sonarcloud.io",
+       "project_key": "your-organization:your-project-key"
+}
