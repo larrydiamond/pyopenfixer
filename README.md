@@ -144,6 +144,58 @@ See the [SonarQube Issues API docs](https://docs.sonarsource.com/sonarqube/lates
 ## Project Structure
 
 ```
+├── config.json.example     # Sample configuration (safe to commit)
+├── config.json             # Your actual config (gitignored — contains your token)
+├── sonar_violations.py     # Main application logic
+├── tests/                  # Unit tests (pytest)
+│   └── test_sonar_violations.py
+├── .gitignore              # Prevents committing secrets
+├── README.md               # This file
+└── AGENTS.md               # Instructions for AI coding agents
+```
+
+## Testing
+
+Tests are written using `pytest` and can be run from the project root:
+
+```bash
+pip install pytest
+pytest
+```
+
+To run with verbose output:
+
+```bash
+pytest -v
+```
+
+To run a specific test class or file:
+
+```bash
+pytest tests/test_sonar_violations.py -v
+```
+
+To run a specific test method:
+
+```bash
+pytest tests/test_sonar_violations.py::TestLoadConfig::test_loads_valid_config -v
+```
+
+To see coverage:
+
+```bash
+pip install pytest-cov
+pytest --cov=sonar_violations --cov-report=term-missing
+```
+
+The test suite covers:
+- **`TestLoadConfig`** (6 tests) — valid config, default path, missing file, missing keys, invalid JSON
+- **`TestGetCurrentBranch`** (5 tests) — normal branch, empty output, CalledProcessError, FileNotFoundError, custom cwd
+- **`TestIsBranchMain`** (3 tests) — matching branches, non-matching, case sensitivity
+- **`TestGetMainBranchName`** (3 tests) — returns main branch, fallback to "main", HTTP errors
+- **`TestFetchViolations`** (5 tests) — single page, multi-page pagination, empty list, correct params, HTTP errors
+- **`TestViolationSortKey`** (6 tests) — type ordering, severity ordering, unknown types/severities, rule/line tiebreakers
+- **`TestMain`** (3 tests) — missing token, successful run, skipping output on non-main branch
 ├── config.json.example    # Sample configuration (safe to commit)
 ├── config.json            # Your actual config (gitignored — contains your token)
 ├── sonar_violations.py    # Main application logic

@@ -16,12 +16,13 @@
 
 ## Core Files
 
-| File                  | Purpose                                                              |
-|-----------------------|----------------------------------------------------------------------|
-| `sonar_violations.py` | Main application — config loading, API calls, pagination, printing   |
-| `config.json`         | User config with SonarQube URL, token, project key (gitignored)      |
-| `config.json.example` | Safe template for config (committed to repo)                         |
-| `README.md`           | User-facing documentation                                            |
+| File                    | Purpose                                                                |
+|-------------------------|------------------------------------------------------------------------|
+| `sonar_violations.py`   | Main application — config loading, API calls, pagination, printing      |
+| `config.json`            | User config with SonarQube URL, project key (gitignored)               |
+| `config.json.example`   | Safe template for config (committed to repo)                            |
+| `tests/`                 | Unit tests using pytest                                                 |
+| `README.md`              | User-facing documentation                                              |
 
 ## Architecture
 
@@ -88,13 +89,41 @@ pip install requests
 python sonar_violations.py
 ```
 
-## Testing (future)
+## Testing
 
-When tests are added, use `pytest`:
+Run the full test suite with `pytest`:
+
 ```bash
 pip install pytest
-pytest
+pytest -v
 ```
+
+Run a specific test class:
+
+```bash
+pytest tests/test_sonar_violations.py::TestLoadConfig -v
+```
+
+Run with coverage report:
+
+```bash
+pip install pytest-cov
+pytest --cov=sonar_violations --cov-report=term-missing
+```
+
+### Test Classes
+
+| Class               | Coverage |
+|---------------------|----------|
+| `TestLoadConfig`         | Config loading, validation, missing files, invalid JSON |
+| `TestGetCurrentBranch`   | Git branch detection via `git rev-parse`, error handling |
+| `TestIsBranchMain`       | Branch name comparison, case sensitivity |
+| `TestGetMainBranchName`  | API call, main branch extraction, fallback, HTTP errors |
+| `TestFetchViolations`    | Pagination, single/multi-page results, empty list, params |
+| `TestViolationSortKey`   | Type ordering, severity ordering, tiebreaker logic |
+| `TestMain`               | Integration: token check, successful run, branch logic |
+
+**Rule**: Every new function or behavior change MUST have corresponding tests.
 
 ## Common Tasks for Agents
 
