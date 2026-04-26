@@ -22,27 +22,21 @@ def load_config(config_path: str = "config.json") -> dict:
 
 
 def get_main_branch_name(session: requests.Session, base_url: str, project_key: str) -> str:
-    """Query SonarQube to discover the main branch name."""
-    url = f"{base_url}/api/meta"
-    resp = session.get(url)
-    resp.raise_for_status()
-    meta = resp.json()
-    branches = meta.get("branches", {})
+    """Discover the main branch name by querying the project_branches/list endpoint.
 
-    if branches:
-        for b in branches.get("branches", branches.get("defaultBranches", [])):
-            if b.get("isMain"):
-                return b["name"]
-
-    fallback = f"/api/measures/component?component={project_key}&metricKeys=branch%2CmainBranch"
-    resp = session.get(fallback)
+    Calls `GET /api/project_branches/list?project={project_key}` which returns
+    an array of branch objects, each with an ``isMain`` boolean flag.  The
+    branch where ``isMain`` is ``True`` is returned.  If no branch is
+    flagged as main the function falls back to ``"main"``.
+    """
+    url = f"{base_url}/api/project_branches/list"
+    resp = session.get(url, params={"project": project_key})
     resp.raise_for_status()
     data = resp.json()
-    for m in data.get("component", {}).get("metrics", []):
-        if m["metric"] in ("mainBranch", "branch"):
-            return m.get("value")
-
-    print("warning: could not determine main branch, defaulting to 'main'")
+    for branch in data.get("projectBranches", []):
+        if branch.get("isMain"):
+            return branch["name"]
+    print("warning: no branch marked as main, defaulting to 'main'")
     return "main"
 
 
