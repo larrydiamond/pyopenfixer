@@ -35,7 +35,7 @@ jobs:
           pip install pytest
           PYTHONPATH=. pytest tests/ -v
 
-        - name: SonarCloud Scan
+      - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
