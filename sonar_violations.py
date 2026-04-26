@@ -13,8 +13,12 @@ def load_config(config_path: str = "config.json") -> dict:
     if not path.exists():
         print(f"Config file not found: {config_path}")
         sys.exit(1)
-    with open(path) as f:
-        config = json.load(f)
+    try:
+        with open(path) as f:
+            config = json.load(f)
+    except json.JSONDecodeError:
+        print(f"config.json is not valid JSON")
+        sys.exit(1)
     for key in ("sonarqube_url", "project_key"):
         if key not in config:
             print(f"Missing required config key: {key}")
@@ -23,13 +27,13 @@ def load_config(config_path: str = "config.json") -> dict:
 
 
 def get_current_branch(repo_path: str = ".") -> str:
-     """Return the name of the current git branch.
+    """Return the name of the current git branch.
 
-     Runs ``git rev-parse --abbrev-ref HEAD`` inside *repo\_path*.
-     Falls back to ``"HEAD"`` when the command fails (e.g. not a git repo
-     or detached HEAD).
-     """
-     try:
+    Runs ``git rev-parse --abbrev-ref HEAD`` inside *repo_path*.
+    Falls back to ``"HEAD"`` when the command fails (e.g. not a git repo
+    or detached HEAD).
+    """
+    try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
@@ -39,24 +43,24 @@ def get_current_branch(repo_path: str = ".") -> str:
         )
         branch = result.stdout.strip()
         return branch if branch else "HEAD"
-     except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print("warning: could not determine current git branch, defaulting to 'HEAD'")
         return "HEAD"
 
 
 def is_branch_main(current_branch: str, main_branch: str) -> bool:
-    """Return True if *current\_branch* matches the repository's main branch."""
+    """Return True if *current_branch* matches the repository's main branch."""
     return current_branch == main_branch
 
 
 def get_main_branch_name(session: requests.Session, base_url: str, project_key: str) -> str:
-    """Discover the main branch name by querying the project\_branches/list endpoint.
+    """Discover the main branch name by querying the project_branches/list endpoint.
 
-     Calls ``GET /api/project\_branches/list?project={project\_key}`` which returns
-     an array of branch objects, each with an ``isMain`` boolean flag.
-     The branch where ``isMain`` is ``True`` is returned.
-     Falls back to ``"main"`` if no branch is flagged as main.
-     """
+    Calls ``GET /api/project_branches/list?project={project_key}`` which returns
+    an array of branch objects, each with an ``isMain`` boolean flag.
+    The branch where ``isMain`` is ``True`` is returned.
+    Falls back to ``"main"`` if no branch is flagged as main.
+    """
     url = f"{base_url}/api/project_branches/list"
     resp = session.get(url, params={"project": project_key})
     resp.raise_for_status()
@@ -74,33 +78,31 @@ def fetch_violations(
     project_key: str,
     branch: str,
     page_size: int = 500
-) ->list[dict]:
+) -> list[dict]:
     """Fetch all violations/issues for the given project/branch using pagination.
 
-     Calls the SonarCloud/SonarQube Issues API endpoint:
-     ``GET /api/issues/search?projectKeys={project_key}&branch={branch}...``
-     with the standard query parameters ``projectKeys``, ``branch``,
-     ``ps`` (page size), ``p`` (page number), and ``statuses``
-     (``OPEN,CONFIRMED``).
-      """
+    Calls the SonarCloud/SonarQube Issues API endpoint:
+    ``GET /api/issues/search?projectKeys={project_key}&branch={branch}...``
+    with the standard query parameters ``projectKeys``, ``branch``,
+    ``ps`` (page size), ``p`` (page number), and ``statuses``
+    (``OPEN,CONFIRMED``).
+    """
     url = f"{base_url}/api/issues/search"
     params = {
-         "projectKeys": project_key,
-         "branch": branch,
-         "ps": page_size,
-         "p": 1,
-         "statuses": "OPEN,CONFIRMED",
-         "types": "CODE_SMELL,BUG,VULNERABILITY",
+        "projectKeys": project_key,
+        "branch": branch,
+        "ps": page_size,
+        "p": 1,
+        "statuses": "OPEN,CONFIRMED",
+        "types": "CODE_SMELL,BUG,VULNERABILITY",
     }
 
     all_violations: list[dict] = []
     while True:
         resp = session.get(url, params=params)
-        # print (f"fetching violations: page {params} (total so far: {len(all_violations)} )")
         resp.raise_for_status()
         data = resp.json()
         issues = data.get("issues", [])
-        # print (f"fetching violations: page {params} (total so far: {len(all_violations)} {issues})")
         all_violations.extend(issues)
         if len(all_violations) >= data.get("paging", {}).get("total", 0):
             break
@@ -111,9 +113,9 @@ def fetch_violations(
 
 def _violation_sort_key(v: dict):
     """Return a sort key so violations are ordered:
-     code smells → bugs → vulnerabilities,
-     and within each type: minor → major → critical → blocker.
-      """
+    code smells -> bugs -> vulnerabilities,
+    and within each type: minor -> major -> critical -> blocker.
+    """
     type_order = {"CODE_SMELL": 0, "BUG": 1, "VULNERABILITY": 2}
     severity_order = {"INFO": 0, "MINOR": 1, "MAJOR": 2, "CRITICAL": 3, "BLOCKER": 4}
     return (
@@ -147,7 +149,7 @@ def main():
     violations = fetch_violations(session, base_url, project_key, branch_to_query)
 
     if is_branch_main(current_branch, main_branch):
-        print(f"on main branch — {len(violations)} violations from {project_key} on branch '{branch_to_query}':")
+        print(f"on main branch - {len(violations)} violations from {project_key} on branch '{branch_to_query}':")
         sorted_violations = sorted(violations, key=_violation_sort_key)
         for v in sorted_violations:
             print(
@@ -155,7 +157,7 @@ def main():
                 f"{v.get('component', '')} ({v.get('rule', '')}) "
                 f"at line {v.get('line', '?')}: "
                 f"{v.get('message', '')[:80]}"
-               )
+            )
     else:
         print(f"on branch '{current_branch}' (not '{main_branch}'), skipping violation output")
 
