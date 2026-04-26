@@ -35,11 +35,10 @@ jobs:
           pip install pytest
           PYTHONPATH=. pytest tests/ -v
 
-      - name: SonarCloud Scan
+        - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
-        with:
-          projectKey: larrydiamond_pyopenfixer
-          organization: larrydiamond-github
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_PROJECT_KEY: larrydiamond_pyopenfixer
+          SONAR_ORGANIZATION: larrydiamond-github
