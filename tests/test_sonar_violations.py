@@ -425,13 +425,25 @@ class TestMain:
         mock_response.raise_for_status = MagicMock()
         mock_session.get.return_value = mock_response
 
-        mock_issues_resp = MagicMock()
-        mock_issues_resp.json.return_value = {
-            "paging": {"total": 2},
-            "issues": [SAMPLE_VIOLATIONS[0], SAMPLE_VIOLATIONS[2]],
-        }
-        mock_issues_resp.raise_for_status = MagicMock()
-        mock_session.get.side_effect = [mock_response, mock_issues_resp]
+        mock_branch_issues_resp = MagicMock()
+        mock_branch_issues_resp.json.return_value = {
+             "paging": {"total": 2},
+             "issues": [SAMPLE_VIOLATIONS[0], SAMPLE_VIOLATIONS[2]],
+         }
+        mock_branch_issues_resp.raise_for_status = MagicMock()
+
+        mock_main_issues_resp = MagicMock()
+        mock_main_issues_resp.json.return_value = {
+              "paging": {"total": 2},
+              "issues": [SAMPLE_VIOLATIONS[3], SAMPLE_VIOLATIONS[4]],
+          }
+        mock_main_issues_resp.raise_for_status = MagicMock()
+
+        mock_session.get.side_effect = [
+            mock_response,
+            mock_branch_issues_resp,
+            mock_main_issues_resp,
+        ]
 
         with patch("sonar_violations.load_config", return_value=SAMPLE_CONFIG):
             with patch("sonar_violations.get_current_branch", return_value="feature/foo"):
@@ -439,6 +451,10 @@ class TestMain:
                     result = sv.main()
 
         assert len(result) == 2
+        assert result[0]["key"] == "a1"
         captured = capsys.readouterr()
+        assert "current git branch: feature/foo" in captured.out
+        assert "main branch: main" in captured.out
         assert "on branch 'feature/foo'" in captured.out
-        assert "skipping violation output" in captured.out
+        assert "Total violations on 'feature/foo'" in captured.out
+        assert "Severity summary:" in captured.out

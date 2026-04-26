@@ -82,10 +82,7 @@ def fetch_violations(
     """Fetch all violations/issues for the given project/branch using pagination.
 
     Calls the SonarCloud/SonarQube Issues API endpoint:
-    ``GET /api/issues/search?projectKeys={project_key}&branch={branch}...``
-    with the standard query parameters ``projectKeys``, ``branch``,
-    ``ps`` (page size), ``p`` (page number), and ``statuses``
-    (``OPEN,CONFIRMED``).
+        GET /api/issues/search?projectKeys={project_key}&branch={branch}&ps={page_size}&p=1&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY
     """
     url = f"{base_url}/api/issues/search"
     params = {
@@ -111,8 +108,19 @@ def fetch_violations(
     return all_violations
 
 
+def _extract_issue_id(v: dict) -> str:
+    """Return a unique identifier for a SonarQube issue."""
+    return v.get("key", "")
+
+
+def _branch_only_violations(violations: list[dict], main_keys: set[str]) -> list[dict]:
+    """Return violations whose IDs are not present in the main branch issue set."""
+    return [v for v in violations if _extract_issue_id(v) not in main_keys]
+
+
 def _violation_sort_key(v: dict):
     """Return a sort key so violations are ordered:
+
     code smells -> bugs -> vulnerabilities,
     and within each type: minor -> major -> critical -> blocker.
     """
@@ -124,6 +132,33 @@ def _violation_sort_key(v: dict):
         v.get("rule", ""),
         v.get("line", 0),
     )
+
+
+def _print_violations(label: str, violations: list[dict]):
+    """Print a list of violations with summary."""
+    if not violations:
+        return
+    sorted_violations = sorted(violations, key=_violation_sort_key)
+    for v in sorted_violations:
+        print(
+            f"[{v.get('severity', '?')}] {v.get('type', '?')} - "
+            f"{v.get('component', '')} ({v.get('rule', '')}) "
+            f"at line {v.get('line', '?')}: "
+            f"{v.get('message', '')[:80]}"
+        )
+
+
+def _print_severity_summary(violations: list[dict]):
+    """Print a summary count of violations by severity level."""
+    severity_counts: dict[str, int] = {}
+    for v in violations:
+        sev = v.get("severity", "UNKNOWN")
+        severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+    print("\nSeverity summary:")
+    for s in ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]:
+        if s in severity_counts:
+            print(f" {s}: {severity_counts[s]}")
 
 
 def main():
@@ -144,38 +179,33 @@ def main():
     main_branch = get_main_branch_name(session, base_url, project_key)
     print(f"main branch: {main_branch}")
 
-    branch_to_query = main_branch if is_branch_main(current_branch, main_branch) else current_branch
-
-    violations = fetch_violations(session, base_url, project_key, branch_to_query)
-
     if is_branch_main(current_branch, main_branch):
-        print(f"on main branch - {len(violations)} violations from {project_key} on branch '{branch_to_query}':")
-        sorted_violations = sorted(violations, key=_violation_sort_key)
-        for v in sorted_violations:
-            print(
-                f"    [{v.get('severity', '?')}] {v.get('type', '?')} - "
-                f"{v.get('component', '')} ({v.get('rule', '')}) "
-                f"at line {v.get('line', '?')}: "
-                f"{v.get('message', '')[:80]}"
-                )
+        violations = fetch_violations(session, base_url, project_key, main_branch)
 
-        severity_counts: dict[str, int] = {}
-        for v in violations:
-            sev = v.get("severity", "UNKNOWN")
-            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        print(f"\non main branch - {len(violations)} violations from {project_key} on branch '{main_branch}':")
+        _print_violations("", violations)
+        _print_severity_summary(violations)
 
-        print("Violation summary by severity:")
-        for s in ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]:
-            if s in severity_counts:
-                print(f"   {s}: {severity_counts[s]}")
-
-        total = len(violations)
-        print(f"\nTotal violations on '{branch_to_query}': {total}")
-        print(f"\nThank you for pushing PyOpenFixer 1.0.0")
+        print(f"\nTotal violations on '{main_branch}': {len(violations)}")
     else:
-        print(f"on branch '{current_branch}' (not '{main_branch}'), skipping violation output")
+        branch_violations = fetch_violations(session, base_url, project_key, current_branch)
+        main_violations = fetch_violations(session, base_url, project_key, main_branch)
 
-    return violations
+        main_keys: set[str] = set(_extract_issue_id(v) for v in main_violations)
+        branch_only = _branch_only_violations(branch_violations, main_keys)
+
+        print(f"\non branch '{current_branch}' (not '{main_branch}'):")
+        print(f" Total violations on '{current_branch}': {len(branch_violations)}")
+        print(f" Total violations on '{main_branch}': {len(main_violations)}")
+        print(f" Violations on '{current_branch}' but NOT on '{main_branch}': {len(branch_only)}")
+
+        if branch_only:
+            print(f"\nNew violations on '{current_branch}' not in '{main_branch}':")
+            _print_violations("", branch_only)
+            _print_severity_summary(branch_only)
+
+    print(f"\nThank you for pushing PyOpenFixer 1.0.0")
+    return branch_violations if not is_branch_main(current_branch, main_branch) else violations
 
 
 if __name__ == "__main__":
