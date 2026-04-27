@@ -1,10 +1,10 @@
 # pyopenfixer
 
-A lightweight Python utility for retrieving SonarQube/SonarCloud code quality violations (bugs, vulnerabilities, code smells) from any branch.
+A lightweight Python utility for retrieving <b>and fixing</b> SonarQube/SonarCloud code quality violations (bugs, vulnerabilities, code smells) from any branch.
 
 ## Overview
 
-`pyopenfixer` connects to your SonarQube server, discovers the main branch, and fetches all open/confirmed violations using the SonarQube Issues API with automatic pagination. The violations are returned as a list of dictionaries, making them easy to filter, transform, or export.
+`pyopenfixer` connects to your SonarQube server, discovers the main branch, and fetches all open/confirmed violations using the SonarQube Issues API with automatic pagination. The violations are returned as a list of dictionaries, making them easy to filter, transform, or export.   You may also pass in a sonarqube rule (python:S1234) and pyopenfixer will use opencode to attempt to fix all the issues for that rule.
 
 ## Features
 
