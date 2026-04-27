@@ -17,7 +17,7 @@ def load_config(config_path: str = "config.json") -> dict:
         with open(path) as f:
             config = json.load(f)
     except json.JSONDecodeError:
-        print(f"config.json is not valid JSON")
+        print("config.json is not valid JSON")
         sys.exit(1)
     for key in ("sonarqube_url", "project_key"):
         if key not in config:
@@ -170,6 +170,8 @@ def main():
         print("Environment variable SONAR_TOKEN is not set.")
         sys.exit(1)
 
+    fix_rule = sys.argv[1] if len(sys.argv) > 1 else None
+
     current_branch = get_current_branch()
     print(f"current git branch: {current_branch}")
 
@@ -187,6 +189,7 @@ def main():
         _print_severity_summary(violations)
 
         print(f"\nTotal violations on '{main_branch}': {len(violations)}")
+        violations_to_fix = violations
     else:
         branch_violations = fetch_violations(session, base_url, project_key, current_branch)
         main_violations = fetch_violations(session, base_url, project_key, main_branch)
@@ -204,8 +207,35 @@ def main():
             _print_violations("", branch_only)
             _print_severity_summary(branch_only)
 
+        violations_to_fix = branch_only
+
+    print(f"\nAttempting to fix issues with PyOpenFixer 1.0.0... {fix_rule}")
+    for v in violations_to_fix:
+#        print(f"\ntesting violation {fix_rule} {v.get('rule')} {v.get('key', '')} - {v.get('message', '')[:80]}...")
+        if fix_rule and (v.get('rule') == fix_rule):
+            print(f"\n[OPENCODE] Attempting to fix {v.get('component', '')}:{v.get('line', '?')} ({v.get('rule', '')})")
+            message = v.get("message", "unknown issue")
+            component = v.get("component", "unknown")
+            line = v.get("line", "?")
+            fix_prompt = "fix the problem " + message + " in " + component + " on line " + str(line)
+
+            try:
+                result = subprocess.run(
+                    ["opencode", "run", fix_prompt],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                print(f"\n[OPENCODE] Fixed: {component}:{line} ({v.get('rule', '')})")
+                if result.stdout:
+                    print(result.stdout)
+            except FileNotFoundError:
+                print(f"\n[OPENCODE] opencode not found in PATH — skipped {component}:{line}")
+            except subprocess.CalledProcessError as e:
+                print(f"\n[OPENCODE] Command failed for {component}:{line}: {e}")
+
     print(f"\nThank you for pushing PyOpenFixer 1.0.0")
-    return branch_violations if not is_branch_main(current_branch, main_branch) else violations
+    return violations_to_fix
 
 
 if __name__ == "__main__":
