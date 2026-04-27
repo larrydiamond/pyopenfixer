@@ -7,7 +7,7 @@
 
 # pyopenfixer
 
-A lightweight Python utility for retrieving <b>and fixing</b> SonarQube/SonarCloud code quality violations (bugs, vulnerabilities, code smells) from any branch.
+A lightweight Python utility for retrieving <b><u>and fixing</u></b> SonarQube/SonarCloud code quality violations (bugs, vulnerabilities, code smells) from any branch.
 
 ## Overview
 
