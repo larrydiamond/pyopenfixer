@@ -1,6 +1,7 @@
 import json
 import subprocess
 import tempfile
+import urllib.parse
 from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 
@@ -8,6 +9,10 @@ import pytest
 import requests
 
 import sonar_violations as sv
+
+
+def _urlencode(s: str) -> str:
+    return urllib.parse.quote(s, safe="")
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -225,7 +230,7 @@ class TestGetMainBranchName:
         assert result == "main"
         mock_session.get.assert_called_once_with(
             "https://sonarcloud.io/api/project_branches/list",
-            params={"project": "my-project"},
+            params={"project": _urlencode("my-project")},
         )
 
     def test_falls_back_to_main_when_no_main_branch(self, capsys):
@@ -310,8 +315,8 @@ class TestFetchViolations:
 
         sv.fetch_violations(mock_session, "https://sonarcloud.io", "my-project", "develop", page_size=100)
         call_args = mock_session.get.call_args
-        assert call_args[1]["params"]["projectKeys"] == "my-project"
-        assert call_args[1]["params"]["branch"] == "develop"
+        assert call_args[1]["params"]["projectKeys"] == _urlencode("my-project")
+        assert call_args[1]["params"]["branch"] == _urlencode("develop")
         assert call_args[1]["params"]["ps"] == 100
         assert call_args[1]["params"]["p"] == 1
         assert call_args[1]["params"]["statuses"] == "OPEN,CONFIRMED"

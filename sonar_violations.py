@@ -1,10 +1,20 @@
 import json
 import os
 import subprocess
+import urllib.parse
 import requests
 import sys
 from pathlib import Path
 from typing import Optional
+
+
+def _urlencode_value(value: str) -> str:
+    """Percent-encode a string value for use as a SonarQube API query parameter.
+
+    Uses ``urllib.parse.quote`` with ``safe=""`` so all special characters
+    (including ``-`` and ``.`` which are normally left unencoded) are URL-encoded.
+    """
+    return urllib.parse.quote(value, safe="")
 
 
 def load_config(config_path: str = "config.json") -> dict:
@@ -39,7 +49,7 @@ def get_current_branch(repo_path: str = ".") -> str:
             capture_output=True,
             text=True,
             check=True,
-            cwd=repo_path
+            cwd=repo_path,
         )
         branch = result.stdout.strip()
         return branch if branch else "HEAD"
@@ -62,7 +72,7 @@ def get_main_branch_name(session: requests.Session, base_url: str, project_key: 
     Falls back to ``"main"`` if no branch is flagged as main.
     """
     url = f"{base_url}/api/project_branches/list"
-    resp = session.get(url, params={"project": project_key})
+    resp = session.get(url, params={"project": _urlencode_value(project_key)})
     resp.raise_for_status()
     data = resp.json()
     for branch in data.get("projectBranches", []):
@@ -77,7 +87,7 @@ def fetch_violations(
     base_url: str,
     project_key: str,
     branch: str,
-    page_size: int = 500
+    page_size: int = 500,
 ) -> list[dict]:
     """Fetch all violations/issues for the given project/branch using pagination.
 
@@ -86,8 +96,8 @@ def fetch_violations(
     """
     url = f"{base_url}/api/issues/search"
     params = {
-        "projectKeys": project_key,
-        "branch": branch,
+        "projectKeys": _urlencode_value(project_key),
+        "branch": _urlencode_value(branch),
         "ps": page_size,
         "p": 1,
         "statuses": "OPEN,CONFIRMED",
@@ -95,7 +105,7 @@ def fetch_violations(
     }
 
     all_violations: list[dict] = []
-    while True:
+    while ((params["p"] - 1) * page_size < 10000):
         resp = session.get(url, params=params)
         resp.raise_for_status()
         data = resp.json()
@@ -209,9 +219,9 @@ def main():
 
         violations_to_fix = branch_only
 
-    print(f"\nAttempting to fix issues with PyOpenFixer 1.0.0... {fix_rule}")
+    print(f"\nAttempting to fix issues with PyOpenFixer 1.0.1... {fix_rule}")
     for v in violations_to_fix:
-#        print(f"\ntesting violation {fix_rule} {v.get('rule')} {v.get('key', '')} - {v.get('message', '')[:80]}...")
+        #        print(f"\ntesting violation {fix_rule} {v.get('rule')} {v.get('key', '')} - {v.get('message', '')[:80]}...")
         if fix_rule and (v.get('rule') == fix_rule):
             print(f"\n[OPENCODE] Attempting to fix {v.get('component', '')}:{v.get('line', '?')} ({v.get('rule', '')})")
             message = v.get("message", "unknown issue")
@@ -234,7 +244,7 @@ def main():
             except subprocess.CalledProcessError as e:
                 print(f"\n[OPENCODE] Command failed for {component}:{line}: {e}")
 
-    print(f"\nThank you for pushing PyOpenFixer 1.0.0")
+    print(f"\nThank you for pushing PyOpenFixer 1.0.1")
     return violations_to_fix
 
 
