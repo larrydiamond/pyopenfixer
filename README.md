@@ -108,6 +108,30 @@ No additional configuration is required.
 python sonar_violations.py
 ```
 
+### Fix a specific rule automatically
+
+Pass a SonarQube rule as the first argument to filter violations to that rule and automatically run `opencode run` on each matching violation:
+
+```bash
+python sonar_violations.py java:S1858
+```
+
+This will:
+1. Fetch all violations from the project and branch
+2. Filter to only violations with `rule == "java:S1858"`
+3. For each matching violation, run:
+   ```bash
+   opencode run "fix the problem {message} in {component} on line {line}"
+   ```
+
+The `opencode` command receives a prompt built from the violation's `message`, `component`, and `line` fields, allowing AI to automatically remediate the issue.
+
+### Fix with a different rule
+
+```bash
+python sonar_violations.py python:S301
+```
+
 Output:
 ```
 current git branch: main
