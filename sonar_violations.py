@@ -212,6 +212,9 @@ def main():
         print(f" Total violations on '{main_branch}': {len(main_violations)}")
         print(f" Violations on '{current_branch}' but NOT on '{main_branch}': {len(branch_only)}")
 
+        if (len(main_violations) > 0) and (len(branch_violations) == 0):
+            print(f"\nNo violations found on '{current_branch}' but '{main_branch}' has {len(main_violations)} issues - this can happen on free installations of SonarQube or free accounts on SonarCloud.")
+
         if branch_only:
             print(f"\nNew violations on '{current_branch}' not in '{main_branch}':")
             _print_violations("", branch_only)
