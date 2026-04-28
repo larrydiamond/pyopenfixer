@@ -192,7 +192,7 @@ class TestGetCurrentBranch:
             text=True,
             check=True,
             cwd="/some/repo",
-         )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -265,9 +265,9 @@ class TestFetchViolations:
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.json.return_value = {
-             "paging": {"total": 1, "pageIndex": 1, "pageSize": 500, "totalPages": 1},
-             "issues": [SAMPLE_VIOLATIONS[0]],
-         }
+            "paging": {"total": 1, "pageIndex": 1, "pageSize": 500, "totalPages": 1},
+            "issues": [SAMPLE_VIOLATIONS[0]],
+        }
         mock_response.raise_for_status = MagicMock()
         mock_session.get.return_value = mock_response
 
@@ -403,20 +403,20 @@ class TestMain:
 
         mock_issues_resp = MagicMock()
         mock_issues_resp.json.return_value = {
-             "paging": {"total": 1},
-             "issues": [SAMPLE_VIOLATIONS[0]],
-         }
+            "paging": {"total": 1},
+            "issues": [SAMPLE_VIOLATIONS[0]],
+        }
         mock_issues_resp.raise_for_status = MagicMock()
 
         mock_coverage_resp = MagicMock()
         mock_coverage_resp.json.return_value = {
-             "component": {
-                 "key": "twilio_java",
-                 "name": "twilio_java",
-                 "measures": [{"metric": "coverage", "value": "82"}],
-             },
-             "metrics": [{"key": "coverage", "name": "Coverage", "type": "PERCENT"}],
-         }
+            "component": {
+                "key": "twilio_java",
+                "name": "twilio_java",
+                "measures": [{"metric": "coverage", "value": "82"}],
+            },
+            "metrics": [{"key": "coverage", "name": "Coverage", "type": "PERCENT"}],
+        }
         mock_coverage_resp.raise_for_status = MagicMock()
 
         mock_session.get.side_effect = [mock_response, mock_issues_resp, mock_coverage_resp]
@@ -446,14 +446,14 @@ class TestMain:
         mock_branch_issues_resp.json.return_value = {
              "paging": {"total": 2},
              "issues": [SAMPLE_VIOLATIONS[0], SAMPLE_VIOLATIONS[2]],
-         }
+        }
         mock_branch_issues_resp.raise_for_status = MagicMock()
 
         mock_main_issues_resp = MagicMock()
         mock_main_issues_resp.json.return_value = {
-              "paging": {"total": 2},
-              "issues": [SAMPLE_VIOLATIONS[3], SAMPLE_VIOLATIONS[4]],
-          }
+            "paging": {"total": 2},
+            "issues": [SAMPLE_VIOLATIONS[3], SAMPLE_VIOLATIONS[4]],
+        }
         mock_main_issues_resp.raise_for_status = MagicMock()
 
         mock_session.get.side_effect = [
