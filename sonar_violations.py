@@ -175,7 +175,7 @@ def _print_violations(label: str, violations: list[dict]):
             f"[{v.get('severity', '?')}] {v.get('type', '?')} - "
             f"{v.get('component', '')} ({v.get('rule', '')}) "
             f"at line {v.get('line', '?')}: "
-            f"{v.get('message', '')[:80]}"
+            f"{v.get('message', '')[:120]}"
         )
 
 
@@ -241,11 +241,10 @@ def main():
 
         print(f"\nTotal violations on '{main_branch}': {len(violations)}")
 
-        print("\nFetching code coverage data...")
+        # print("\nFetching code coverage data...")
         coverage_data = fetch_coverage(session, base_url, project_key, main_branch)
         _print_coverage(coverage_data)
 
-        print(f"\nTotal violations on '{main_branch}': {len(violations)}")
         violations_to_fix = violations
     else:
         branch_violations = fetch_violations(session, base_url, project_key, current_branch)
