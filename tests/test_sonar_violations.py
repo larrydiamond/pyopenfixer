@@ -403,11 +403,23 @@ class TestMain:
 
         mock_issues_resp = MagicMock()
         mock_issues_resp.json.return_value = {
-            "paging": {"total": 1},
-            "issues": [SAMPLE_VIOLATIONS[0]],
-        }
+             "paging": {"total": 1},
+             "issues": [SAMPLE_VIOLATIONS[0]],
+         }
         mock_issues_resp.raise_for_status = MagicMock()
-        mock_session.get.side_effect = [mock_response, mock_issues_resp]
+
+        mock_coverage_resp = MagicMock()
+        mock_coverage_resp.json.return_value = {
+             "component": {
+                 "key": "twilio_java",
+                 "name": "twilio_java",
+                 "measures": [{"metric": "coverage", "value": "82"}],
+             },
+             "metrics": [{"key": "coverage", "name": "Coverage", "type": "PERCENT"}],
+         }
+        mock_coverage_resp.raise_for_status = MagicMock()
+
+        mock_session.get.side_effect = [mock_response, mock_issues_resp, mock_coverage_resp]
 
         with patch("sonar_violations.load_config", return_value=SAMPLE_CONFIG):
             with patch("sonar_violations.get_current_branch", return_value="main"):

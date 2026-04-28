@@ -118,6 +118,27 @@ def fetch_violations(
     return all_violations
 
 
+def fetch_coverage(session: requests.Session, base_url: str, project_key: str, branch: str) -> dict:
+    """Fetch coverage data for the given project/branch from SonarQube.
+
+    Calls ``GET /api/measures/component?component={project_key}&branch={branch}&metricKeys=coverage``.
+    Returns the response as a dict, or ``{"error": ...}`` on failure.
+    """
+    url = f"{base_url}/api/measures/component"
+    params = {
+        "component": _urlencode_value(project_key),
+        "branch": _urlencode_value(branch),
+        "metricKeys": "coverage",
+    }
+    try:
+        resp = session.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.exceptions.RequestException as e:
+        print(f"warning: could not fetch coverage data: {e}")
+        return {"error": str(e)}
+
+
 def _extract_issue_id(v: dict) -> str:
     """Return a unique identifier for a SonarQube issue."""
     return v.get("key", "")
@@ -171,6 +192,25 @@ def _print_severity_summary(violations: list[dict]):
             print(f" {s}: {severity_counts[s]}")
 
 
+def _print_coverage(api_response: dict):
+    """Print a summary of coverage data from the SonarQube measures API response."""
+    if "error" in api_response:
+        return
+    component = api_response.get("component", {})
+    measures = component.get("measures", [])
+    coverage = None
+    for m in measures:
+        if m.get("metric") == "coverage":
+            coverage = m.get("value")
+            break
+    branch_name = component.get("name", component.get("key", ""))
+    print(f"\nCode coverage summary for {branch_name}:")
+    if coverage is not None:
+        print(f" overall: {coverage}%")
+    else:
+        print(" coverage data not available")
+
+
 def main():
     config = load_config()
     base_url = config["sonarqube_url"].rstrip("/")
@@ -186,7 +226,8 @@ def main():
     print(f"current git branch: {current_branch}")
 
     session = requests.Session()
-    session.headers.update({"Authorization": f"Bearer {token}"})
+    if (token != "None"):
+        session.headers.update({"Authorization": f"Bearer {token}"})
 
     main_branch = get_main_branch_name(session, base_url, project_key)
     print(f"main branch: {main_branch}")
@@ -197,6 +238,12 @@ def main():
         print(f"\non main branch - {len(violations)} violations from {project_key} on branch '{main_branch}':")
         _print_violations("", violations)
         _print_severity_summary(violations)
+
+        print(f"\nTotal violations on '{main_branch}': {len(violations)}")
+
+        print("\nFetching code coverage data...")
+        coverage_data = fetch_coverage(session, base_url, project_key, main_branch)
+        _print_coverage(coverage_data)
 
         print(f"\nTotal violations on '{main_branch}': {len(violations)}")
         violations_to_fix = violations
@@ -222,9 +269,12 @@ def main():
 
         violations_to_fix = branch_only
 
+        print("\nFetching code coverage data...")
+        _print_coverage(fetch_coverage(session, base_url, project_key, current_branch))
+        _print_coverage(fetch_coverage(session, base_url, project_key, main_branch))
+
     print(f"\nAttempting to fix issues with PyOpenFixer 1.0.1... {fix_rule}")
     for v in violations_to_fix:
-        #        print(f"\ntesting violation {fix_rule} {v.get('rule')} {v.get('key', '')} - {v.get('message', '')[:80]}...")
         if fix_rule and (v.get('rule') == fix_rule):
             print(f"\n[OPENCODE] Attempting to fix {v.get('component', '')}:{v.get('line', '?')} ({v.get('rule', '')})")
             message = v.get("message", "unknown issue")
@@ -243,7 +293,7 @@ def main():
                 if result.stdout:
                     print(result.stdout)
             except FileNotFoundError:
-                print(f"\n[OPENCODE] opencode not found in PATH — skipped {component}:{line}")
+                print(f"\n[OPENCODE] opencode not found in PATH - skipped {component}:{line}")
             except subprocess.CalledProcessError as e:
                 print(f"\n[OPENCODE] Command failed for {component}:{line}: {e}")
 
