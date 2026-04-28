@@ -220,7 +220,7 @@ def main():
         print("Environment variable SONAR_TOKEN is not set.")
         sys.exit(1)
 
-    fix_rule = sys.argv[1] if len(sys.argv) > 1 else None
+    fix_rule = sys.argv[2] if len(sys.argv) > 2 else None
 
     current_branch = get_current_branch()
     print(f"current git branch: {current_branch}")
@@ -273,7 +273,8 @@ def main():
         _print_coverage(fetch_coverage(session, base_url, project_key, current_branch))
         _print_coverage(fetch_coverage(session, base_url, project_key, main_branch))
 
-    print(f"\nAttempting to fix issues with PyOpenFixer 1.0.1... {fix_rule}")
+    if fix_rule != None:
+        print(f"\nAttempting to fix issues with PyOpenFixer 1.0.1... {fix_rule}")
     for v in violations_to_fix:
         if fix_rule and (v.get('rule') == fix_rule):
             print(f"\n[OPENCODE] Attempting to fix {v.get('component', '')}:{v.get('line', '?')} ({v.get('rule', '')})")
