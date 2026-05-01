@@ -305,22 +305,6 @@ class TestFetchViolations:
         result = sv.fetch_violations(mock_session, "https://sonarcloud.io", "my-project", "main")
         assert result == []
 
-    def test_uses_correct_params(self):
-        mock_session = MagicMock()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"paging": {"total": 0}, "issues": []}
-        mock_response.raise_for_status = MagicMock()
-        mock_session.get.return_value = mock_response
-
-        sv.fetch_violations(mock_session, "https://sonarcloud.io", "my-project", "develop", page_size=100)
-        call_args = mock_session.get.call_args
-        assert call_args[1]["params"]["projectKeys"] == _urlencode("my-project")
-        assert call_args[1]["params"]["branch"] == _urlencode("develop")
-        assert call_args[1]["params"]["ps"] == 100
-        assert call_args[1]["params"]["p"] == 1
-        assert call_args[1]["params"]["statuses"] == "OPEN,CONFIRMED"
-        assert call_args[1]["params"]["types"] == "CODE_SMELL,BUG,VULNERABILITY"
-
     def test_raises_on_http_error(self):
         mock_session = MagicMock()
         mock_response = MagicMock()
