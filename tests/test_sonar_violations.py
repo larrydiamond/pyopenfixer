@@ -229,8 +229,7 @@ class TestGetMainBranchName:
         result = sv.get_main_branch_name(mock_session, "https://sonarcloud.io", "my-project")
         assert result == "main"
         mock_session.get.assert_called_once_with(
-            "https://sonarcloud.io/api/project_branches/list",
-            params={"project": _urlencode("my-project")},
+            "https://sonarcloud.io/api/project_branches/list?project=my-project"
         )
 
     def test_falls_back_to_main_when_no_main_branch(self, capsys):
