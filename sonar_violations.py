@@ -71,8 +71,9 @@ def get_main_branch_name(session: requests.Session, base_url: str, project_key: 
     The branch where ``isMain`` is ``True`` is returned.
     Falls back to ``"main"`` if no branch is flagged as main.
     """
-    url = f"{base_url}/api/project_branches/list"
-    resp = session.get(url, params={"project": _urlencode_value(project_key)})
+    encoded_project = urllib.parse.quote(project_key, safe="")
+    url = f"{base_url}/api/project_branches/list?project={encoded_project}"
+    resp = session.get(url)
     resp.raise_for_status()
     data = resp.json()
     for branch in data.get("projectBranches", []):
@@ -94,26 +95,21 @@ def fetch_violations(
     Calls the SonarCloud/SonarQube Issues API endpoint:
         GET /api/issues/search?projectKeys={project_key}&branch={branch}&ps={page_size}&p=1&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY
     """
-    url = f"{base_url}/api/issues/search"
-    params = {
-        "projectKeys": _urlencode_value(project_key),
-        "branch": _urlencode_value(branch),
-        "ps": page_size,
-        "p": 1,
-        "statuses": "OPEN,CONFIRMED",
-        "types": "CODE_SMELL,BUG,VULNERABILITY",
-    }
+    encoded_project = urllib.parse.quote(project_key, safe="")
+    encoded_branch = urllib.parse.quote(branch, safe="")
+    p = 1
 
     all_violations: list[dict] = []
-    while ((params["p"] - 1) * page_size < 10000):
-        resp = session.get(url, params=params)
+    while ((p - 1) * page_size < 10000):
+        url = f"{base_url}/api/issues/search?componentKeys={encoded_project}&branch={encoded_branch}&ps={page_size}&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY&p={p}"
+        resp = session.get(url)
         resp.raise_for_status()
         data = resp.json()
         issues = data.get("issues", [])
         all_violations.extend(issues)
         if len(all_violations) >= data.get("paging", {}).get("total", 0):
             break
-        params["p"] += 1
+        p += 1
 
     return all_violations
 
@@ -124,14 +120,11 @@ def fetch_coverage(session: requests.Session, base_url: str, project_key: str, b
     Calls ``GET /api/measures/component?component={project_key}&branch={branch}&metricKeys=coverage``.
     Returns the response as a dict, or ``{"error": ...}`` on failure.
     """
-    url = f"{base_url}/api/measures/component"
-    params = {
-        "component": _urlencode_value(project_key),
-        "branch": _urlencode_value(branch),
-        "metricKeys": "coverage",
-    }
+    encoded_project = urllib.parse.quote(project_key, safe="")
+    encoded_branch = urllib.parse.quote(branch, safe="")
+    url = f"{base_url}/api/measures/component?component={encoded_project}&branch={encoded_branch}&metricKeys=coverage"
     try:
-        resp = session.get(url, params=params)
+        resp = session.get(url)
         resp.raise_for_status()
         return resp.json()
     except requests.exceptions.RequestException as e:
@@ -273,7 +266,7 @@ def main():
         _print_coverage(fetch_coverage(session, base_url, project_key, main_branch))
 
     if fix_rule != None:
-        print(f"\nAttempting to fix issues with PyOpenFixer 1.0.1... {fix_rule}")
+        print(f"\nAttempting to fix project issues using PyOpenFixer 1.0.2... {fix_rule}")
     for v in violations_to_fix:
         if fix_rule and (v.get('rule') == fix_rule):
             print(f"\n[OPENCODE] Attempting to fix {v.get('component', '')}:{v.get('line', '?')} ({v.get('rule', '')})")
@@ -297,9 +290,8 @@ def main():
             except subprocess.CalledProcessError as e:
                 print(f"\n[OPENCODE] Command failed for {component}:{line}: {e}")
 
-    print(f"\nThank you for pushing PyOpenFixer 1.0.1")
+    print(f"\nThank you for using PyOpenFixer 1.0.2")
     return violations_to_fix
-
 
 if __name__ == "__main__":
     violations = main()
