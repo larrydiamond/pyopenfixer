@@ -23,6 +23,15 @@ A lightweight Python utility for retrieving ***and fixing*** SonarQube/SonarClou
 - **No external dependencies** — Only requires the standard `requests` library
 - **CI/CD integration** — Automatic SonarCloud analysis on every push and merge via GitHub Actions
 
+## Note on SonarQube Coverage Configuration
+
+If you encounter an error like: "Invalid directory path in 'source' element: /home/runner/work/pyopenfixer/pyopenfixer", it's typically a configuration issue in your CI/CD setup or SonarQube configuration.
+
+Ensure that:
+1. You are running coverage analysis with the correct path configuration 
+2. The coverage report paths in sonar-project.properties match your current working directory
+3. If running locally, ensure you're generating coverage data in a directory that matches your SonarQube configuration
+
 ## Installation
 
 ### Prerequisites
