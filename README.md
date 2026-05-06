@@ -4,7 +4,7 @@
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=larrydiamond_pyopenfixer&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=larrydiamond_pyopenfixer)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=larrydiamond_pyopenfixer&metric=bugs)](https://sonarcloud.io/summary/new_code?id=larrydiamond_pyopenfixer)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=larrydiamond_pyopenfixer&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=larrydiamond_pyopenfixer)
-
+[![Supported Versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://github.com/larrydiamond/pyopenfixer)
 # pyopenfixer
 
 A lightweight Python utility for retrieving ***and fixing*** SonarQube/SonarCloud code quality violations (bugs, vulnerabilities, code smells) from any branch.
