@@ -328,4 +328,3 @@ The included `.github/workflows/sonarcloud.yml` workflow automatically analyzes 
 5. **Trigger** a SonarCloud scan using `SonarSource/sonarcloud-github-action@v3`
 
 This ensures code quality is assessed on every merge, preventing regressions from being merged into your main branch.
-

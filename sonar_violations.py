@@ -83,35 +83,6 @@ def get_main_branch_name(session: requests.Session, base_url: str, project_key: 
     return "main"
  
  
-def fetch_violations(
-    session: requests.Session,
-    base_url: str,
-    project_key: str,
-    branch: str,
-    page_size: int = 500,
-) -> list[dict]:
-    """Fetch all violations/issues for the given project/branch using pagination.
- 
-    Calls the SonarCloud/SonarQube Issues API endpoint:
-        GET /api/issues/search?projectKeys={project_key}&branch={branch}&ps={page_size}&p=1&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY
-    """
-    encoded_project = urllib.parse.quote(project_key, safe="")
-    encoded_branch = urllib.parse.quote(branch, safe="")
-    p = 1
-    url = f"{base_url}/api/issues/search?componentKeys={encoded_project}&branch={encoded_branch}&pageSize={page_size}&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY&p={p}"
- 
-    all_violations: list[dict] = []
-    while ((p * page_size) < 10000):
-        resp = session.get(url)
-        resp.raise_for_status()
-        data = resp.json()
-        issues = data.get("issues", [])
-        all_violations.extend(issues)
-        if len(all_violations) >= data.get("paging", {}).get("total", 0):
-            break
-        p += 1
- 
-    return all_violations
  
  
 def fetch_coverage(session: requests.Session, base_url: str, project_key: str, branch: str) -> dict:
@@ -134,7 +105,7 @@ def fetch_coverage(session: requests.Session, base_url: str, project_key: str, b
  
 def _extract_issue_id(v: dict) -> str:
     """Return a unique identifier for a SonarQube issue."""
-    return v.get("hash", "")
+    return v.get("key", "")
  
  
 def _branch_only_violations(violations: list[dict], main_keys: set[str]) -> list[dict]:
@@ -283,10 +254,46 @@ def main():
                 print(f"\n[OPENCODE] opencode not found in PATH - skipped {component}:{line}")
             except subprocess.CalledProcessError as e:
                 print(f"\n[OPENCODE] Command failed for {component}:{line}: {e}")
- 
+
     print(f"\nThank you for pushing PyOpenFixer 1.0.3! Please consider starring the project on GitHub: https://github.com/larrydiamond/pyopenfixer")
     return violations_to_fix
- 
- 
+
+
+def fetch_violations(
+    session: requests.Session,
+    base_url: str,
+    project_key: str,
+    branch: str,
+    page_size: int = 500,
+) -> list[dict]:
+    """Fetch all violations/issues for the given project/branch using pagination.
+
+    Calls the SonarCloud/SonarQube Issues API endpoint:
+        GET /api/issues/search?projectKeys={project_key}&branch={branch}&ps={page_size}&p=1&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY
+    """
+    encoded_project = urllib.parse.quote(project_key, safe="")
+    encoded_branch = urllib.parse.quote(branch, safe="")
+    p = 1
+
+    all_violations: list[dict] = []
+    while True:
+        url = f"{base_url}/api/issues/search?componentKeys={encoded_project}&branch={encoded_branch}&ps={page_size}&statuses=OPEN,CONFIRMED&types=CODE_SMELL,BUG,VULNERABILITY&p={p}"
+        resp = session.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+        issues = data.get("issues", [])
+        all_violations.extend(issues)
+        # Check if we've fetched all pages by comparing current page index with total pages
+        paging = data.get("paging", {})
+        total_pages = paging.get("totalPages", 1)
+        current_page = paging.get("pageIndex", 1)
+        # If we don't have pagination info, or if we've reached the last page, stop
+        if not paging or current_page >= total_pages:
+            break
+        p += 1
+
+    return all_violations
+
+
 if __name__ == "__main__":
     violations = main()
